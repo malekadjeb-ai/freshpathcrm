@@ -2,26 +2,38 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth";
 import { getDb } from "@/src/db";
 import { promoCodes } from "@/src/db/schema";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, count } from "drizzle-orm";
 import { promoCodeSchema } from "@/lib/validations/promo-code";
 
 export async function GET(req: NextRequest) {
   try {
     const auth = await requireAuth();
     if ("error" in auth) return auth.error;
-    const { session: _session, tenantId } = auth;
+    const { session: _session, tenantId: _tenantId } = auth;
 
     const db = getDb();
     const { searchParams } = new URL(req.url);
     const active = searchParams.get("active");
+    const page = searchParams.get("page") ? parseInt(searchParams.get("page")!) : null;
+    const limit = Math.min(parseInt(searchParams.get("limit") || "25"), 100);
 
-    let codes;
-    if (active === "true") {
-      codes = await db.select().from(promoCodes).where(eq(promoCodes.isActive, true)).orderBy(desc(promoCodes.createdAt));
-    } else {
-      codes = await db.select().from(promoCodes).orderBy(desc(promoCodes.createdAt));
+    const where = active === "true" ? eq(promoCodes.isActive, true) : undefined;
+
+    const [totalResult, codes] = await Promise.all([
+      db.select({ count: count() }).from(promoCodes).where(where),
+      page
+        ? db.select().from(promoCodes).where(where).orderBy(desc(promoCodes.createdAt)).limit(limit).offset((page - 1) * limit)
+        : db.select().from(promoCodes).where(where).orderBy(desc(promoCodes.createdAt)),
+    ]);
+
+    const total = totalResult[0].count;
+
+    if (page) {
+      return NextResponse.json({
+        data: codes,
+        pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+      });
     }
-
     return NextResponse.json(codes);
   } catch {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
@@ -32,7 +44,7 @@ export async function POST(req: NextRequest) {
   try {
     const auth = await requireAuth();
     if ("error" in auth) return auth.error;
-    const { session: _session, tenantId } = auth;
+    const { session: _session, tenantId: _tenantId } = auth;
 
     const db = getDb();
     const body = await req.json();

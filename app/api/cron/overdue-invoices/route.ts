@@ -2,14 +2,14 @@ import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth";
 import { getDb } from "@/src/db";
 import { invoices, customers } from "@/src/db/schema";
-import { and, eq, isNull, lt, notInArray, inArray } from "drizzle-orm";
+import { and, isNull, lt, notInArray, inArray } from "drizzle-orm";
 import { triggerWorkflows } from "@/lib/services/workflow-engine";
 
 export async function GET() {
   try {
     const auth = await requireAuth();
     if ("error" in auth) return auth.error;
-    const { session, tenantId } = auth;
+    const { session, tenantId: _tenantId } = auth;
 
     const db = getDb();
 

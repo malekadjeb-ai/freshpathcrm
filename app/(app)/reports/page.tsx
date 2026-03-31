@@ -41,6 +41,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { formatDateTime, fetchJson } from "@/lib/utils";
+import { EmptyState } from "@/components/empty-state";
 import { toast } from "sonner";
 
 interface ScheduledReport {
@@ -213,22 +214,13 @@ export default function ReportsPage() {
 
       {/* Empty State */}
       {!isLoading && !isError && reports.length === 0 && (
-        <Card>
-          <CardContent className="p-12 text-center">
-            <FileBarChart className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-slate-700">No scheduled reports</h3>
-            <p className="text-slate-500 mt-1 mb-4">
-              Create your first scheduled report to receive automated insights
-            </p>
-            <Button
-              onClick={() => setDialogOpen(true)}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Create Report
-            </Button>
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={FileBarChart}
+          title="No scheduled reports"
+          description="Create your first scheduled report to receive automated insights."
+          actionLabel="Create Report"
+          onAction={() => setDialogOpen(true)}
+        />
       )}
 
       {/* Reports List */}

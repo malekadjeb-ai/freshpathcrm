@@ -1,11 +1,14 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/src/db";
 import { jobs, vehicles, jobServices, serviceItems } from "@/src/db/schema";
 import { and, eq, inArray, isNull } from "drizzle-orm";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
     const db = getDb();
+    const { searchParams } = new URL(req.url);
+    const page = searchParams.get("page") ? parseInt(searchParams.get("page")!) : null;
+    const limit = Math.min(parseInt(searchParams.get("limit") || "25"), 100);
     const galleryJobs = await db.select({
       id: jobs.id,
       photos: jobs.photos,
@@ -66,7 +69,17 @@ export async function GET() {
       };
     });
 
-    return NextResponse.json(gallery.filter(Boolean));
+    const filtered = gallery.filter(Boolean);
+
+    if (page) {
+      const total = filtered.length;
+      const paginatedResult = filtered.slice((page - 1) * limit, page * limit);
+      return NextResponse.json({
+        data: paginatedResult,
+        pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+      });
+    }
+    return NextResponse.json(filtered);
   } catch {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }

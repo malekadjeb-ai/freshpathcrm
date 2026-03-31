@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/src/db";
 import { businessSettings, communications, tasks, users, notifications } from "@/src/db/schema";
-import { eq, and, gte, inArray, or } from "drizzle-orm";
+import { eq, and, gte, or } from "drizzle-orm";
 import { getAuthedGoogleClient } from "@/lib/google";
 import { syncGoogleVoiceFromGmail } from "@/lib/services/gmail-voice-sync";
 import { syncLSALeadsFromGmail } from "@/lib/services/gmail-lsa-sync";

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth";
 import { getDb } from "@/src/db";
 import { communications, customers, jobs } from "@/src/db/schema";
-import { eq, and, isNull, like, gte, lte, inArray } from "drizzle-orm";
+import { eq, and, isNull, gte, lte } from "drizzle-orm";
 import { communicationSchema } from "@/lib/validations/communication";
 import { recalculateHealthScore } from "@/lib/services/customer-health";
 

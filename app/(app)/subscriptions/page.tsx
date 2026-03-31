@@ -15,6 +15,7 @@ import {
 import { toast } from "sonner";
 import { formatCurrency, formatDate, fetchJson } from "@/lib/utils";
 import { ErrorState } from "@/components/error-state";
+import { EmptyState } from "@/components/empty-state";
 
 interface Subscription {
   id: string;
@@ -150,13 +151,11 @@ export default function SubscriptionsPage() {
           ))}
         </div>
       ) : subscriptions.length === 0 ? (
-        <div className="text-center py-16 bg-white rounded-xl border border-slate-200">
-          <CreditCard className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-          <h3 className="text-lg font-semibold text-slate-900 mb-1">No subscriptions yet</h3>
-          <p className="text-sm text-slate-500">
-            Start a service plan from a customer profile to create recurring revenue.
-          </p>
-        </div>
+        <EmptyState
+          icon={CreditCard}
+          title="No subscriptions yet"
+          description="Start a service plan from a customer profile to create recurring revenue."
+        />
       ) : (
         <div className="space-y-3">
           {subscriptions.map((sub) => (

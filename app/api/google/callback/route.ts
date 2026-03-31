@@ -9,7 +9,7 @@ import { google } from "googleapis";
 export async function GET(req: NextRequest) {
   const auth = await requireAuth();
   if ("error" in auth) return NextResponse.redirect(new URL("/login", req.url));
-  const { session: _session, tenantId } = auth;
+  const { session: _session, tenantId: _tenantId } = auth;
 
   const code = req.nextUrl.searchParams.get("code");
   if (!code) return NextResponse.redirect(new URL("/settings?error=no_code", req.url));

@@ -1,17 +1,37 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth";
 import { getDb } from "@/src/db";
-import { asc, eq } from "drizzle-orm";
+import { asc, eq, count } from "drizzle-orm";
 import { tags } from "@/src/db/schema";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
     const auth = await requireAuth();
     if ("error" in auth) return auth.error;
     const { session: _session, tenantId } = auth;
 
     const db = getDb();
-    const rows = await db.select().from(tags).where(eq(tags.tenantId, tenantId)).orderBy(asc(tags.name));
+    const { searchParams } = new URL(req.url);
+    const page = searchParams.get("page") ? parseInt(searchParams.get("page")!) : null;
+    const limit = Math.min(parseInt(searchParams.get("limit") || "25"), 100);
+
+    const where = eq(tags.tenantId, tenantId);
+
+    const [totalResult, rows] = await Promise.all([
+      db.select({ count: count() }).from(tags).where(where),
+      page
+        ? db.select().from(tags).where(where).orderBy(asc(tags.name)).limit(limit).offset((page - 1) * limit)
+        : db.select().from(tags).where(where).orderBy(asc(tags.name)),
+    ]);
+
+    const total = totalResult[0].count;
+
+    if (page) {
+      return NextResponse.json({
+        data: rows,
+        pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+      });
+    }
     return NextResponse.json(rows);
   } catch {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

@@ -14,6 +14,8 @@ export async function GET(req: NextRequest) {
     const db = getDb();
     const { searchParams } = new URL(req.url);
     const customerId = searchParams.get("customerId");
+    const page = searchParams.get("page") ? parseInt(searchParams.get("page")!) : null;
+    const limit = Math.min(parseInt(searchParams.get("limit") || "25"), 100);
 
     // Pre-fetch tenant customer IDs for scoping
     const tenantCustRows = await db.select({ id: customers.id }).from(customers).where(eq(customers.tenantId, tenantId));
@@ -40,6 +42,14 @@ export async function GET(req: NextRequest) {
       customer: contractCustMap.get(contract.customerId) ?? undefined,
     }));
 
+    if (page) {
+      const total = enriched.length;
+      const paginatedResult = enriched.slice((page - 1) * limit, page * limit);
+      return NextResponse.json({
+        data: paginatedResult,
+        pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+      });
+    }
     return NextResponse.json(enriched);
   } catch {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

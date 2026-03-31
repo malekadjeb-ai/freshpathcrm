@@ -11,7 +11,7 @@ export async function PATCH(
   try {
     const auth = await requireAuth();
     if ("error" in auth) return auth.error;
-    const { session: _session, tenantId } = auth;
+    const { session: _session, tenantId: _tenantId } = auth;
 
     const db = getDb();
     const notification = await db.update(notifications).set({ read: true }).where(eq(notifications.id, params.id)).returning().then(r => r[0]);
@@ -32,7 +32,7 @@ export async function DELETE(
   try {
     const auth = await requireAuth();
     if ("error" in auth) return auth.error;
-    const { session: _session, tenantId } = auth;
+    const { session: _session, tenantId: _tenantId } = auth;
 
     const db = getDb();
     await db.delete(notifications).where(eq(notifications.id, params.id));

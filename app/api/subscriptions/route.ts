@@ -15,6 +15,8 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const status = searchParams.get("status");
     const customerId = searchParams.get("customerId");
+    const page = searchParams.get("page") ? parseInt(searchParams.get("page")!) : null;
+    const limit = Math.min(parseInt(searchParams.get("limit") || "25"), 100);
 
     // Pre-fetch tenant customer IDs for scoping
     const tenantCustRows = await db.select({ id: customers.id }).from(customers).where(eq(customers.tenantId, tenantId));
@@ -54,6 +56,14 @@ export async function GET(req: NextRequest) {
       vehicle: sub.vehicleId ? subVehMap.get(sub.vehicleId) ?? null : null,
     }));
 
+    if (page) {
+      const total = enriched.length;
+      const paginatedResult = enriched.slice((page - 1) * limit, page * limit);
+      return NextResponse.json({
+        data: paginatedResult,
+        pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+      });
+    }
     return NextResponse.json(enriched);
   } catch (error) {
     console.error("Subscriptions error:", error);

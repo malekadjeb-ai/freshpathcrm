@@ -6,7 +6,7 @@ import {
   recurringJobs, leads, tasks, payments, communications,
   jobServices, serviceItems, vehicles, businessSettings,
 } from "@/src/db/schema";
-import { eq, and, gte, lte, lt, inArray, not, notInArray, isNull, isNotNull, ne, desc, asc, sql } from "drizzle-orm";
+import { eq, and, gte, lte, lt, inArray, notInArray, isNull, isNotNull, ne, desc, asc, sql } from "drizzle-orm";
 import { startOfDay, endOfDay, startOfMonth, endOfMonth, subDays, subMonths, format } from "date-fns";
 
 export async function GET() {

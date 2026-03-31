@@ -8,12 +8,14 @@ export async function GET(req: NextRequest) {
   try {
     const auth = await requireAuth();
     if ("error" in auth) return auth.error;
-    const { session: _session, tenantId } = auth;
+    const { session: _session, tenantId: _tenantId } = auth;
 
     const db = getDb();
     const { searchParams } = new URL(req.url);
     const status = searchParams.get("status");
     const jobId = searchParams.get("jobId");
+    const page = searchParams.get("page") ? parseInt(searchParams.get("page")!) : null;
+    const limit = Math.min(parseInt(searchParams.get("limit") || "25"), 100);
 
     const conditions = [];
     if (status) conditions.push(eq(scheduledMessages.status, status));
@@ -48,6 +50,14 @@ export async function GET(req: NextRequest) {
       template: msg.templateId ? msgTemplateMap.get(msg.templateId) ?? null : null,
     }));
 
+    if (page) {
+      const total = enriched.length;
+      const paginatedResult = enriched.slice((page - 1) * limit, page * limit);
+      return NextResponse.json({
+        data: paginatedResult,
+        pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+      });
+    }
     return NextResponse.json(enriched);
   } catch {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
@@ -58,7 +68,7 @@ export async function POST(req: NextRequest) {
   try {
     const auth = await requireAuth();
     if ("error" in auth) return auth.error;
-    const { session: _session, tenantId } = auth;
+    const { session: _session, tenantId: _tenantId } = auth;
 
     const db = getDb();
     const { customerId, jobId, channel, to, subject, body, scheduledAt, templateId } = await req.json();

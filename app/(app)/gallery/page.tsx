@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { formatDate, fetchJson } from "@/lib/utils";
 import { ErrorState } from "@/components/error-state";
+import { EmptyState } from "@/components/empty-state";
 
 interface GalleryPhoto {
   url: string;
@@ -77,15 +78,11 @@ export default function GalleryPage() {
           ))}
         </div>
       ) : filtered.length === 0 ? (
-        <Card>
-          <CardContent className="py-16 text-center">
-            <ImageIcon className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-            <h3 className="font-medium text-slate-600 mb-2">No gallery items yet</h3>
-            <p className="text-sm text-slate-400 max-w-md mx-auto">
-              Toggle &quot;Show in Gallery&quot; on completed jobs with photos to feature them here
-            </p>
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={ImageIcon}
+          title="No gallery items yet"
+          description="Toggle 'Show in Gallery' on completed jobs with photos to feature them here."
+        />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {filtered.map((item) => (

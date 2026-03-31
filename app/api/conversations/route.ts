@@ -18,6 +18,8 @@ export async function GET(req: NextRequest) {
     const db = getDb();
     const { searchParams } = new URL(req.url);
     const search = searchParams.get("search") || "";
+    const page = searchParams.get("page") ? parseInt(searchParams.get("page")!) : null;
+    const limit = Math.min(parseInt(searchParams.get("limit") || "25"), 100);
 
     // ─── Customer threads ───────────────────────────────────────
     // Get customers that have sms/email communications
@@ -185,6 +187,14 @@ export async function GET(req: NextRequest) {
       return bTime - aTime;
     });
 
+    if (page) {
+      const total = allThreads.length;
+      const paginatedResult = allThreads.slice((page - 1) * limit, page * limit);
+      return NextResponse.json({
+        data: paginatedResult,
+        pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+      });
+    }
     return NextResponse.json(allThreads);
   } catch (error) {
     console.error("Conversations error:", error);

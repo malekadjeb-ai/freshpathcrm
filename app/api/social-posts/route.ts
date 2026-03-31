@@ -16,12 +16,15 @@ export async function GET(req: NextRequest) {
   try {
     const auth = await requireAuth();
     if ("error" in auth) return auth.error;
-    const { session: _session, tenantId } = auth;
+    const { session: _session, tenantId: _tenantId } = auth;
 
     const db = getDb();
     const { searchParams } = new URL(req.url);
     const status = searchParams.get("status");
     const platform = searchParams.get("platform");
+
+    const page = searchParams.get("page") ? parseInt(searchParams.get("page")!) : null;
+    const limit = Math.min(parseInt(searchParams.get("limit") || "25"), 100);
 
     let posts = await db
       .select()
@@ -33,6 +36,14 @@ export async function GET(req: NextRequest) {
 
     posts.sort((a, b) => (b.createdAt > a.createdAt ? 1 : -1));
 
+    if (page) {
+      const total = posts.length;
+      const paginatedResult = posts.slice((page - 1) * limit, page * limit);
+      return NextResponse.json({
+        data: paginatedResult,
+        pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+      });
+    }
     return NextResponse.json(posts.slice(0, 50));
   } catch (error) {
     console.error("Social posts error:", error);
@@ -44,7 +55,7 @@ export async function POST(req: NextRequest) {
   try {
     const auth = await requireAuth();
     if ("error" in auth) return auth.error;
-    const { session: _session, tenantId } = auth;
+    const { session: _session, tenantId: _tenantId } = auth;
 
     const db = getDb();
     const body = await req.json();
@@ -77,7 +88,7 @@ export async function PUT(req: NextRequest) {
   try {
     const auth = await requireAuth();
     if ("error" in auth) return auth.error;
-    const { session: _session, tenantId } = auth;
+    const { session: _session, tenantId: _tenantId } = auth;
 
     const db = getDb();
     const body = await req.json();

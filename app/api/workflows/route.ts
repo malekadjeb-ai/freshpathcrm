@@ -9,11 +9,13 @@ export async function GET(req: NextRequest) {
   try {
     const auth = await requireAuth();
     if ("error" in auth) return auth.error;
-    const { session: _session, tenantId } = auth;
+    const { session: _session, tenantId: _tenantId } = auth;
 
     const db = getDb();
     const { searchParams } = new URL(req.url);
     const isTemplate = searchParams.get("templates") === "true";
+    const page = searchParams.get("page") ? parseInt(searchParams.get("page")!) : null;
+    const limit = Math.min(parseInt(searchParams.get("limit") || "25"), 100);
 
     let allWorkflows;
     if (isTemplate) {
@@ -37,6 +39,14 @@ export async function GET(req: NextRequest) {
       logCount: logCountMap.get(w.id) ?? 0,
     }));
 
+    if (page) {
+      const total = parsed.length;
+      const paginatedResult = parsed.slice((page - 1) * limit, page * limit);
+      return NextResponse.json({
+        data: paginatedResult,
+        pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+      });
+    }
     return NextResponse.json(parsed);
   } catch {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
@@ -47,7 +57,7 @@ export async function POST(req: NextRequest) {
   try {
     const auth = await requireAuth();
     if ("error" in auth) return auth.error;
-    const { session: _session, tenantId } = auth;
+    const { session: _session, tenantId: _tenantId } = auth;
 
     const db = getDb();
     const body = await req.json();

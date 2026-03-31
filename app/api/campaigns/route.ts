@@ -2,14 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth";
 import { getDb } from "@/src/db";
 import { campaigns, customers, customerTags } from "@/src/db/schema";
-import { eq, isNull, and, isNotNull } from "drizzle-orm";
+import { isNull, isNotNull } from "drizzle-orm";
 import { campaignSchema } from "@/lib/validations/campaign";
 
 export async function GET(req: NextRequest) {
   try {
     const auth = await requireAuth();
     if ("error" in auth) return auth.error;
-    const { session: _session, tenantId } = auth;
+    const { session: _session, tenantId: _tenantId } = auth;
 
     const db = getDb();
     const { searchParams } = new URL(req.url);
@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
   try {
     const auth = await requireAuth();
     if ("error" in auth) return auth.error;
-    const { session: _session, tenantId } = auth;
+    const { session: _session, tenantId: _tenantId } = auth;
 
     const db = getDb();
     const body = await req.json();
@@ -74,13 +74,13 @@ export async function POST(req: NextRequest) {
 async function countAudience(criteria: Record<string, string | string[]>) {
   const db = getDb();
 
-  let rows = await db
+  let _rows = await db
     .select({ id: customers.id, email: customers.email, phone: customers.phone })
     .from(customers)
     .where(isNull(customers.deletedAt));
 
   if (criteria.lifecycleStage) {
-    rows = rows.filter((c) => (c as Record<string, unknown>).lifecycleStage === criteria.lifecycleStage);
+    _rows = _rows.filter((c) => (c as Record<string, unknown>).lifecycleStage === criteria.lifecycleStage);
   }
 
   // Re-query with proper filters for correctness

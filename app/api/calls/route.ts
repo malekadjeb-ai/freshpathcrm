@@ -84,6 +84,8 @@ export async function GET(req: NextRequest) {
     const search = searchParams.get("search") || "";
     const direction = searchParams.get("direction") || "";
     const outcome = searchParams.get("outcome") || "";
+    const page = searchParams.get("page") ? parseInt(searchParams.get("page")!) : null;
+    const limit = Math.min(parseInt(searchParams.get("limit") || "25"), 100);
 
     const rows = await db
       .select({
@@ -120,6 +122,14 @@ export async function GET(req: NextRequest) {
 
     results.sort((a, b) => (b.createdAt > a.createdAt ? 1 : -1));
 
+    if (page) {
+      const total = results.length;
+      const paginatedResult = results.slice((page - 1) * limit, page * limit);
+      return NextResponse.json({
+        data: paginatedResult,
+        pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+      });
+    }
     return NextResponse.json(results.slice(0, 100));
   } catch (error) {
     console.error("Calls error:", error);

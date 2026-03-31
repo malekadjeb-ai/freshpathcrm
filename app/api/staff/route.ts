@@ -24,6 +24,8 @@ export async function GET(req: NextRequest) {
     const db = getDb();
     const { searchParams } = new URL(req.url);
     const active = searchParams.get("active");
+    const page = searchParams.get("page") ? parseInt(searchParams.get("page")!) : null;
+    const limit = Math.min(parseInt(searchParams.get("limit") || "25"), 100);
 
     const conditions = [eq(staff.tenantId, tenantId)];
     if (active !== null) conditions.push(eq(staff.isActive, active === "true"));
@@ -60,6 +62,14 @@ export async function GET(req: NextRequest) {
       };
     });
 
+    if (page) {
+      const total = staffWithStats.length;
+      const paginatedResult = staffWithStats.slice((page - 1) * limit, page * limit);
+      return NextResponse.json({
+        data: paginatedResult,
+        pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+      });
+    }
     return NextResponse.json(staffWithStats);
   } catch {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

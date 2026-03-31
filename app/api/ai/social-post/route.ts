@@ -8,7 +8,7 @@ export async function POST(req: NextRequest) {
   try {
     const auth = await requireAuth();
     if ("error" in auth) return auth.error;
-    const { session: _session, tenantId } = auth;
+    const { session: _session, tenantId: _tenantId } = auth;
 
     const { jobId } = await req.json();
     if (!jobId) return NextResponse.json({ error: "jobId required" }, { status: 400 });

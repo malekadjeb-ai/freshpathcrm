@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Inbox, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -9,7 +10,7 @@ interface EmptyStateProps {
   description?: string;
   actionLabel?: string;
   onAction?: () => void;
-  action?: { label: string; onClick: () => void };
+  action?: { label: string; onClick: () => void } | { label: string; href: string };
 }
 
 export function EmptyState({
@@ -21,7 +22,8 @@ export function EmptyState({
   action,
 }: EmptyStateProps) {
   const resolvedActionLabel = actionLabel || action?.label;
-  const resolvedOnAction = onAction || action?.onClick;
+  const resolvedOnAction = onAction || ("onClick" in (action ?? {}) ? (action as { label: string; onClick: () => void }).onClick : undefined);
+  const resolvedHref = "href" in (action ?? {}) ? (action as { label: string; href: string }).href : undefined;
 
   const renderIcon = () => {
     if (!icon) return <Inbox className="w-10 h-10 text-slate-300 mb-3" />;
@@ -39,7 +41,15 @@ export function EmptyState({
       {description && (
         <p className="text-xs text-slate-400 text-center mt-1">{description}</p>
       )}
-      {resolvedActionLabel && resolvedOnAction && (
+      {resolvedActionLabel && resolvedHref && (
+        <Link
+          href={resolvedHref}
+          className="mt-4 inline-flex items-center justify-center rounded-[min(var(--radius-md),12px)] border border-border bg-background px-2.5 text-[0.8rem] font-medium h-7 hover:bg-muted hover:text-foreground transition-all"
+        >
+          {resolvedActionLabel}
+        </Link>
+      )}
+      {resolvedActionLabel && resolvedOnAction && !resolvedHref && (
         <Button
           variant="outline"
           size="sm"

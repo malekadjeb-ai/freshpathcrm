@@ -5,7 +5,7 @@ import { getAuthUrl } from "@/lib/google";
 export async function GET() {
   const auth = await requireAuth();
     if ("error" in auth) return auth.error;
-    const { session: _session, tenantId } = auth;
+    const { session: _session, tenantId: _tenantId } = auth;
 
   const url = getAuthUrl();
   return NextResponse.redirect(url);

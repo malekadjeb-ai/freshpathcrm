@@ -15,12 +15,15 @@ export async function GET(req: NextRequest) {
   try {
     const auth = await requireAuth();
     if ("error" in auth) return auth.error;
-    const { session: _session, tenantId } = auth;
+    const { session: _session, tenantId: _tenantId } = auth;
 
     const db = getDb();
     const { searchParams } = new URL(req.url);
     const customerId = searchParams.get("customerId");
     const jobId = searchParams.get("jobId");
+
+    const page = searchParams.get("page") ? parseInt(searchParams.get("page")!) : null;
+    const limit = Math.min(parseInt(searchParams.get("limit") || "25"), 100);
 
     let notes = await db.select().from(voiceNotes).orderBy(voiceNotes.createdAt);
 
@@ -29,6 +32,14 @@ export async function GET(req: NextRequest) {
 
     notes.sort((a, b) => (b.createdAt > a.createdAt ? 1 : -1));
 
+    if (page) {
+      const total = notes.length;
+      const paginatedResult = notes.slice((page - 1) * limit, page * limit);
+      return NextResponse.json({
+        data: paginatedResult,
+        pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+      });
+    }
     return NextResponse.json(notes.slice(0, 50));
   } catch (error) {
     console.error("Voice notes error:", error);
@@ -40,7 +51,7 @@ export async function POST(req: NextRequest) {
   try {
     const auth = await requireAuth();
     if ("error" in auth) return auth.error;
-    const { session: _session, tenantId } = auth;
+    const { session: _session, tenantId: _tenantId } = auth;
 
     const db = getDb();
     const body = await req.json();

@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { fetchJson } from "@/lib/utils";
 import { ErrorState } from "@/components/error-state";
+import { EmptyState } from "@/components/empty-state";
 
 interface ChecklistItem {
   label: string;
@@ -210,13 +211,13 @@ export default function ChecklistsPage() {
           ))}
         </div>
       ) : filtered.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <ClipboardCheck className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-            <h3 className="font-medium text-slate-600 mb-1">No checklists</h3>
-            <p className="text-sm text-slate-400">Create quality control checklists for your technicians</p>
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={ClipboardCheck}
+          title="No checklists"
+          description="Create quality control checklists for your technicians."
+          actionLabel="New Checklist"
+          onAction={openCreate}
+        />
       ) : (
         <div className="space-y-2">
           {filtered.map((cl) => (

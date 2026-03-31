@@ -8,18 +8,12 @@ import {
   Search,
   Star,
   Send,
-  Mail,
-  MessageSquare,
-  Trash2,
-  ExternalLink,
-  Filter,
   CheckCircle,
   Clock,
-  XCircle,
+  Filter,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -27,16 +21,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
-import { EmptyState } from "@/components/empty-state";
 import { ErrorState } from "@/components/error-state";
-import { cn, fetchJson, timeAgo } from "@/lib/utils";
+import { fetchJson } from "@/lib/utils";
+import { ReviewList } from "./components/review-list";
+import { CreateReviewDialog, SendReviewDialog } from "./components/review-dialogs";
 
 interface Review {
   id: string;
@@ -54,22 +42,6 @@ interface Review {
   status: string;
   createdAt: string;
 }
-
-const STATUS_COLORS: Record<string, string> = {
-  pending: "bg-slate-100 text-slate-700",
-  sent: "bg-blue-100 text-blue-700",
-  clicked: "bg-amber-100 text-amber-700",
-  reviewed: "bg-emerald-100 text-emerald-700",
-  declined: "bg-red-100 text-red-700",
-};
-
-const STATUS_ICONS: Record<string, React.ReactNode> = {
-  pending: <Clock className="w-3.5 h-3.5" />,
-  sent: <Send className="w-3.5 h-3.5" />,
-  clicked: <ExternalLink className="w-3.5 h-3.5" />,
-  reviewed: <CheckCircle className="w-3.5 h-3.5" />,
-  declined: <XCircle className="w-3.5 h-3.5" />,
-};
 
 const PLATFORMS = ["google", "yelp", "facebook", "nextdoor"];
 
@@ -185,7 +157,6 @@ export default function ReviewsPage() {
 
   return (
     <div className="p-4 md:p-6 space-y-6 pb-24 md:pb-6">
-      {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Reviews</h1>
@@ -203,7 +174,6 @@ export default function ReviewsPage() {
 
       {isError && <ErrorState message="Failed to load reviews." onRetry={refetch} />}
 
-      {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <StatCard label="Pending" value={stats.pending} icon={<Clock className="w-4 h-4 text-slate-400" />} />
         <StatCard label="Sent" value={stats.sent} icon={<Send className="w-4 h-4 text-blue-400" />} />
@@ -211,7 +181,6 @@ export default function ReviewsPage() {
         <StatCard label="Avg Rating" value={stats.avgRating} icon={<Star className="w-4 h-4 text-amber-400" />} />
       </div>
 
-      {/* Filters */}
       <div className="flex flex-col md:flex-row gap-3">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
@@ -247,200 +216,34 @@ export default function ReviewsPage() {
         </Select>
       </div>
 
-      {/* Reviews List */}
-      {isLoading ? (
-        <div className="space-y-3">
-          {[...Array(5)].map((_, i) => (
-            <div key={i} className="h-20 bg-slate-100 rounded-lg animate-pulse" />
-          ))}
-        </div>
-      ) : filteredReviews.length === 0 ? (
-        <EmptyState
-          icon="star"
-          title="No reviews yet"
-          description="Request reviews from customers after completed jobs."
-        />
-      ) : (
-        <div className="space-y-2">
-          {filteredReviews.map((review) => (
-            <div
-              key={review.id}
-              className="bg-white border border-slate-200 rounded-lg p-4"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="font-medium text-slate-900 text-sm">
-                      {review.customer.name}
-                    </span>
-                    <Badge className={cn("text-xs", STATUS_COLORS[review.status])}>
-                      <span className="flex items-center gap-1">
-                        {STATUS_ICONS[review.status]}
-                        {review.status}
-                      </span>
-                    </Badge>
-                    <Badge variant="outline" className="text-xs border-slate-200 text-slate-500">
-                      {review.platform}
-                    </Badge>
-                  </div>
+      <ReviewList
+        reviews={filteredReviews}
+        isLoading={isLoading}
+        onSend={(review) => { setSelectedReview(review); setSendDialogOpen(true); }}
+        onMarkReviewed={(review) => updateMutation.mutate({
+          id: review.id,
+          data: { status: "reviewed", reviewedAt: new Date().toISOString() },
+        })}
+        onDelete={(id) => deleteMutation.mutate(id)}
+      />
 
-                  {review.rating && (
-                    <div className="flex items-center gap-0.5 mb-1">
-                      {[...Array(5)].map((_, i) => (
-                        <Star
-                          key={i}
-                          className={cn(
-                            "w-4 h-4",
-                            i < review.rating!
-                              ? "text-amber-400 fill-amber-400"
-                              : "text-slate-600"
-                          )}
-                        />
-                      ))}
-                    </div>
-                  )}
+      <CreateReviewDialog
+        open={createDialogOpen}
+        onOpenChange={setCreateDialogOpen}
+        customers={customers}
+        selectedCustomerId={selectedCustomerId}
+        setSelectedCustomerId={setSelectedCustomerId}
+        onSubmit={() => createMutation.mutate({ customerId: selectedCustomerId, platform: "google" })}
+        isPending={createMutation.isPending}
+      />
 
-                  {review.content && (
-                    <p className="text-sm text-slate-400 line-clamp-2 mt-1">
-                      &ldquo;{review.content}&rdquo;
-                    </p>
-                  )}
-
-                  <div className="flex items-center gap-3 mt-2 text-xs text-slate-500">
-                    {review.requestSentAt && (
-                      <span>Sent {timeAgo(review.requestSentAt)}</span>
-                    )}
-                    {review.reviewedAt && (
-                      <span className="text-emerald-400">Reviewed {timeAgo(review.reviewedAt)}</span>
-                    )}
-                    <span>Created {timeAgo(review.createdAt)}</span>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-1 shrink-0">
-                  {review.status === "pending" && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="border-slate-200 text-slate-600 hover:bg-slate-50"
-                      onClick={() => { setSelectedReview(review); setSendDialogOpen(true); }}
-                    >
-                      <Send className="w-3.5 h-3.5 mr-1" />
-                      Send
-                    </Button>
-                  )}
-                  {review.status === "sent" && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="border-emerald-700 text-emerald-400 hover:bg-emerald-900/30"
-                      onClick={() => updateMutation.mutate({
-                        id: review.id,
-                        data: { status: "reviewed", reviewedAt: new Date().toISOString() },
-                      })}
-                    >
-                      <CheckCircle className="w-3.5 h-3.5 mr-1" />
-                      Mark Reviewed
-                    </Button>
-                  )}
-                  <button
-                    onClick={() => deleteMutation.mutate(review.id)}
-                    className="text-slate-600 hover:text-red-400 transition-colors p-1.5"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Create Dialog */}
-      <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-        <DialogContent className="bg-white border-slate-200 max-w-md">
-          <DialogHeader>
-            <DialogTitle>Request Review</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label>Customer *</Label>
-              <Select value={selectedCustomerId} onValueChange={(v) => setSelectedCustomerId(v ?? "")}>
-                <SelectTrigger className="mt-1">
-                  <SelectValue placeholder="Select customer" />
-                </SelectTrigger>
-                <SelectContent>
-                  {customers.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={() => setCreateDialogOpen(false)}
-                className="border-slate-200 text-slate-600 hover:bg-slate-50">
-                Cancel
-              </Button>
-              <Button
-                className="bg-emerald-600 hover:bg-emerald-700"
-                disabled={!selectedCustomerId || createMutation.isPending}
-                onClick={() => createMutation.mutate({ customerId: selectedCustomerId, platform: "google" })}
-              >
-                {createMutation.isPending ? "Creating..." : "Create Request"}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Send Dialog */}
-      <Dialog open={sendDialogOpen} onOpenChange={setSendDialogOpen}>
-        <DialogContent className="bg-white border-slate-200 max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Send Review Request</DialogTitle>
-          </DialogHeader>
-          {selectedReview && (
-            <>
-              <p className="text-sm text-slate-400">
-                Send review request to {selectedReview.customer.name}
-              </p>
-              <div className="space-y-2 mt-2">
-                <Button
-                  className="w-full justify-start"
-                  variant="outline"
-                  disabled={!selectedReview.customer.email || sendMutation.isPending}
-                  onClick={() => sendMutation.mutate({ id: selectedReview.id, method: "email" })}
-                >
-                  <Mail className="w-4 h-4 mr-3" />
-                  <div className="text-left">
-                    <div className="text-sm font-medium">Send via Email</div>
-                    <div className="text-xs text-slate-400">
-                      {selectedReview.customer.email || "No email on file"}
-                    </div>
-                  </div>
-                </Button>
-                <Button
-                  className="w-full justify-start"
-                  variant="outline"
-                  disabled={!selectedReview.customer.phone || sendMutation.isPending}
-                  onClick={() => sendMutation.mutate({ id: selectedReview.id, method: "sms" })}
-                >
-                  <MessageSquare className="w-4 h-4 mr-3" />
-                  <div className="text-left">
-                    <div className="text-sm font-medium">Send via SMS</div>
-                    <div className="text-xs text-slate-400">
-                      {selectedReview.customer.phone || "No phone on file"}
-                    </div>
-                  </div>
-                </Button>
-              </div>
-              {sendMutation.isPending && (
-                <p className="text-xs text-slate-400 text-center mt-2">Sending...</p>
-              )}
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
+      <SendReviewDialog
+        open={sendDialogOpen}
+        onOpenChange={setSendDialogOpen}
+        review={selectedReview}
+        onSend={(id, method) => sendMutation.mutate({ id, method })}
+        isPending={sendMutation.isPending}
+      />
     </div>
   );
 }

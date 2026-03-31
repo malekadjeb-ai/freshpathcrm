@@ -3,28 +3,14 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import {
-  Tag, Plus, Search, Trash2, Pencil, Copy,
-} from "lucide-react";
+import { Plus, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Switch } from "@/components/ui/switch";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
-import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import { formatCurrency, formatDate, fetchJson } from "@/lib/utils";
+import { fetchJson } from "@/lib/utils";
 import { ErrorState } from "@/components/error-state";
+import { PromoCodeList } from "./components/promo-code-list";
+import { PromoCodeFormDialog } from "./components/promo-code-form-dialog";
 
 interface PromoCodeData {
   id: string;
@@ -47,7 +33,6 @@ export default function PromoCodesPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
 
-  // Form state
   const [code, setCode] = useState("");
   const [description, setDescription] = useState("");
   const [discountType, setDiscountType] = useState<"dollar" | "percent">("dollar");
@@ -163,19 +148,11 @@ export default function PromoCodesPage() {
   const filtered = codes.filter((c) => {
     if (!search) return true;
     const q = search.toLowerCase();
-    return (
-      c.code.toLowerCase().includes(q) ||
-      (c.description?.toLowerCase().includes(q) ?? false)
-    );
+    return c.code.toLowerCase().includes(q) || (c.description?.toLowerCase().includes(q) ?? false);
   });
 
   const activeCount = codes.filter((c) => c.isActive).length;
   const totalUsed = codes.reduce((s, c) => s + c.usedCount, 0);
-
-  const copyCode = (code: string) => {
-    navigator.clipboard.writeText(code);
-    toast.success("Code copied!");
-  };
 
   return (
     <div className="p-4 md:p-6 pb-24 md:pb-6 max-w-5xl mx-auto">
@@ -192,248 +169,50 @@ export default function PromoCodesPage() {
 
       {isError && <ErrorState message="Failed to load promo codes." onRetry={refetch} />}
 
-      {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-        <Card>
-          <CardContent className="pt-4 pb-3">
-            <div className="text-2xl font-bold text-slate-900">{codes.length}</div>
-            <div className="text-xs text-slate-500">Total Codes</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4 pb-3">
-            <div className="text-2xl font-bold text-emerald-600">{activeCount}</div>
-            <div className="text-xs text-slate-500">Active</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4 pb-3">
-            <div className="text-2xl font-bold text-slate-900">{totalUsed}</div>
-            <div className="text-xs text-slate-500">Total Uses</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4 pb-3">
-            <div className="text-2xl font-bold text-slate-900">{codes.length - activeCount}</div>
-            <div className="text-xs text-slate-500">Inactive</div>
-          </CardContent>
-        </Card>
+        <Card><CardContent className="pt-4 pb-3"><div className="text-2xl font-bold text-slate-900">{codes.length}</div><div className="text-xs text-slate-500">Total Codes</div></CardContent></Card>
+        <Card><CardContent className="pt-4 pb-3"><div className="text-2xl font-bold text-emerald-600">{activeCount}</div><div className="text-xs text-slate-500">Active</div></CardContent></Card>
+        <Card><CardContent className="pt-4 pb-3"><div className="text-2xl font-bold text-slate-900">{totalUsed}</div><div className="text-xs text-slate-500">Total Uses</div></CardContent></Card>
+        <Card><CardContent className="pt-4 pb-3"><div className="text-2xl font-bold text-slate-900">{codes.length - activeCount}</div><div className="text-xs text-slate-500">Inactive</div></CardContent></Card>
       </div>
 
-      {/* Search */}
       <div className="relative mb-4">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-        <Input
-          placeholder="Search promo codes..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="pl-9"
-        />
+        <Input placeholder="Search promo codes..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
       </div>
 
-      {/* List */}
-      {isLoading ? (
-        <div className="space-y-3">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="h-20 bg-slate-100 rounded-xl animate-pulse" />
-          ))}
-        </div>
-      ) : filtered.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <Tag className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-            <h3 className="font-medium text-slate-600 mb-1">No promo codes</h3>
-            <p className="text-sm text-slate-400">Create your first promo code to get started</p>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-2">
-          {filtered.map((promo) => {
-            const isExpired = promo.validUntil && new Date(promo.validUntil) < new Date();
-            const isMaxed = promo.maxUses != null && promo.usedCount >= promo.maxUses;
-            return (
-              <Card key={promo.id}>
-                <CardContent className="py-3">
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                    <div className="flex items-center gap-3 shrink-0">
-                      <div className="flex items-center gap-1.5">
-                        <code className="text-lg font-bold text-slate-900 tracking-wide">{promo.code}</code>
-                        <button onClick={() => copyCode(promo.code)} className="text-slate-400 hover:text-emerald-500">
-                          <Copy className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                      <Badge className={promo.isActive && !isExpired && !isMaxed
-                        ? "bg-emerald-100 text-emerald-700"
-                        : "bg-slate-100 text-slate-500"
-                      }>
-                        {!promo.isActive ? "Inactive" : isExpired ? "Expired" : isMaxed ? "Maxed Out" : "Active"}
-                      </Badge>
-                    </div>
+      <PromoCodeList
+        codes={filtered}
+        isLoading={isLoading}
+        onEdit={openEdit}
+        onToggle={(id, promo) => toggleMutation.mutate({ id, promo })}
+        onDelete={(id) => deleteMutation.mutate(id)}
+      />
 
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 text-sm">
-                        <span className="font-semibold text-emerald-600">
-                          {promo.discountType === "percent"
-                            ? `${promo.discountValue}% off`
-                            : `${formatCurrency(promo.discountValue)} off`}
-                        </span>
-                        {promo.minOrderValue != null && promo.minOrderValue > 0 && (
-                          <span className="text-slate-400">
-                            min {formatCurrency(promo.minOrderValue)}
-                          </span>
-                        )}
-                      </div>
-                      {promo.description && (
-                        <p className="text-xs text-slate-500 mt-0.5 truncate">{promo.description}</p>
-                      )}
-                      <div className="flex gap-3 mt-1 text-xs text-slate-400">
-                        <span>{promo.usedCount}{promo.maxUses ? `/${promo.maxUses}` : ""} uses</span>
-                        {promo.validUntil && (
-                          <span>Expires: {formatDate(promo.validUntil)}</span>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2 shrink-0">
-                      <Switch
-                        checked={promo.isActive}
-                        onCheckedChange={() => toggleMutation.mutate({ id: promo.id, promo })}
-                      />
-                      <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => openEdit(promo)}>
-                        <Pencil className="w-3.5 h-3.5" />
-                      </Button>
-                      <AlertDialog>
-                        <AlertDialogTrigger render={
-                          <Button variant="outline" size="icon" className="h-8 w-8 text-red-500 hover:text-red-600">
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </Button>
-                        } />
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Delete promo code?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              This will permanently delete the promo code &quot;{promo.code}&quot;.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction
-                              className="bg-red-500 hover:bg-red-600"
-                              onClick={() => deleteMutation.mutate(promo.id)}
-                            >
-                              Delete
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Create/Edit Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={(v) => { setDialogOpen(v); if (!v) resetForm(); }}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>{editingId ? "Edit Promo Code" : "Create Promo Code"}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-1.5">
-              <Label>Code</Label>
-              <Input
-                value={code}
-                onChange={(e) => setCode(e.target.value.toUpperCase())}
-                placeholder="SUMMER25"
-                className="uppercase font-mono"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Description</Label>
-              <Textarea
-                rows={2}
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Summer 2026 promotion..."
-                className="resize-none"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label>Discount Type</Label>
-                <Select value={discountType} onValueChange={(v) => setDiscountType((v ?? "dollar") as "dollar" | "percent")}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="dollar">Dollar ($)</SelectItem>
-                    <SelectItem value="percent">Percent (%)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label>Discount Value</Label>
-                <Input
-                  type="number"
-                  min="0.01"
-                  step="0.01"
-                  value={discountValue || ""}
-                  onChange={(e) => setDiscountValue(parseFloat(e.target.value) || 0)}
-                  placeholder={discountType === "percent" ? "25" : "10.00"}
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label>Min Order Value</Label>
-                <Input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={minOrderValue || ""}
-                  onChange={(e) => setMinOrderValue(parseFloat(e.target.value) || 0)}
-                  placeholder="0.00 (no minimum)"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Max Uses</Label>
-                <Input
-                  type="number"
-                  min="0"
-                  value={maxUses || ""}
-                  onChange={(e) => setMaxUses(parseInt(e.target.value) || 0)}
-                  placeholder="Unlimited"
-                />
-              </div>
-            </div>
-            <div className="space-y-1.5">
-              <Label>Expires On</Label>
-              <Input
-                type="date"
-                value={validUntil}
-                onChange={(e) => setValidUntil(e.target.value)}
-              />
-            </div>
-            <div className="flex items-center gap-2">
-              <Switch checked={isActive} onCheckedChange={setIsActive} />
-              <Label className="text-sm">Active</Label>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => { setDialogOpen(false); resetForm(); }}>Cancel</Button>
-            <Button
-              className="bg-emerald-500 hover:bg-emerald-600 text-white"
-              onClick={() => saveMutation.mutate()}
-              disabled={saveMutation.isPending || !code || !discountValue}
-            >
-              {saveMutation.isPending ? "Saving..." : editingId ? "Update" : "Create"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <PromoCodeFormDialog
+        open={dialogOpen}
+        onOpenChange={(v) => { setDialogOpen(v); if (!v) resetForm(); }}
+        editingId={editingId}
+        code={code}
+        setCode={setCode}
+        description={description}
+        setDescription={setDescription}
+        discountType={discountType}
+        setDiscountType={setDiscountType}
+        discountValue={discountValue}
+        setDiscountValue={setDiscountValue}
+        minOrderValue={minOrderValue}
+        setMinOrderValue={setMinOrderValue}
+        maxUses={maxUses}
+        setMaxUses={setMaxUses}
+        validUntil={validUntil}
+        setValidUntil={setValidUntil}
+        isActive={isActive}
+        setIsActive={setIsActive}
+        onSave={() => saveMutation.mutate()}
+        onCancel={() => { setDialogOpen(false); resetForm(); }}
+        isPending={saveMutation.isPending}
+      />
     </div>
   );
 }

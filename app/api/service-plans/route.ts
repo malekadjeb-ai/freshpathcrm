@@ -4,14 +4,25 @@ import { getDb } from "@/src/db";
 import { servicePlans, subscriptions } from "@/src/db/schema";
 import { asc, count } from "drizzle-orm";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
     const auth = await requireAuth();
     if ("error" in auth) return auth.error;
-    const { session: _session, tenantId } = auth;
+    const { session: _session, tenantId: _tenantId } = auth;
 
     const db = getDb();
-    const plans = await db.select().from(servicePlans).orderBy(asc(servicePlans.sortOrder));
+    const { searchParams } = new URL(req.url);
+    const page = searchParams.get("page") ? parseInt(searchParams.get("page")!) : null;
+    const limit = Math.min(parseInt(searchParams.get("limit") || "25"), 100);
+
+    const [totalResult, plans] = await Promise.all([
+      db.select({ count: count() }).from(servicePlans),
+      page
+        ? db.select().from(servicePlans).orderBy(asc(servicePlans.sortOrder)).limit(limit).offset((page - 1) * limit)
+        : db.select().from(servicePlans).orderBy(asc(servicePlans.sortOrder)),
+    ]);
+
+    const total = totalResult[0].count;
 
     // Get subscription counts
     const subCounts = await db
@@ -26,6 +37,12 @@ export async function GET() {
       _count: { subscriptions: subCountMap.get(plan.id) ?? 0 },
     }));
 
+    if (page) {
+      return NextResponse.json({
+        data: result,
+        pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+      });
+    }
     return NextResponse.json(result);
   } catch (error) {
     console.error("Service plans error:", error);
@@ -37,7 +54,7 @@ export async function POST(req: NextRequest) {
   try {
     const auth = await requireAuth();
     if ("error" in auth) return auth.error;
-    const { session: _session, tenantId } = auth;
+    const { session: _session, tenantId: _tenantId } = auth;
 
     const db = getDb();
     const body = await req.json();

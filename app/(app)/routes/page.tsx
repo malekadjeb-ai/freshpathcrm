@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { formatTime, fetchJson } from "@/lib/utils";
 import { ErrorState } from "@/components/error-state";
+import { EmptyState } from "@/components/empty-state";
 import { format, addDays, subDays } from "date-fns";
 
 interface RouteStop {
@@ -146,13 +147,11 @@ export default function RoutesPage() {
           ))}
         </div>
       ) : !data || data.route.stops.length === 0 ? (
-        <div className="text-center py-16 bg-white rounded-xl border border-slate-200">
-          <Route className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-          <h3 className="text-lg font-semibold text-slate-900 mb-1">No jobs scheduled</h3>
-          <p className="text-sm text-slate-500">
-            No jobs with geocoded addresses found for this date.
-          </p>
-        </div>
+        <EmptyState
+          icon={Route}
+          title="No jobs scheduled"
+          description="No jobs with geocoded addresses found for this date."
+        />
       ) : (
         <div className="space-y-0">
           {data.route.stops.map((stop, i) => (

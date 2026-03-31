@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/select";
 import { formatCurrency, formatDate, fetchJson } from "@/lib/utils";
 import { ErrorState } from "@/components/error-state";
+import { EmptyState } from "@/components/empty-state";
 import { Pagination } from "@/components/pagination";
 
 const ESTIMATE_STATUS_COLORS: Record<string, string> = {
@@ -128,10 +129,11 @@ export default function EstimatesPage() {
               <div key={i} className="h-24 bg-slate-100 rounded-lg animate-pulse" />
             ))
           ) : paginated.length === 0 ? (
-            <div className="text-center py-16">
-              <ClipboardList className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-              <p className="text-slate-500 font-medium">No estimates found</p>
-            </div>
+            <EmptyState
+              icon={ClipboardList}
+              title="No estimates found"
+              description="Create your first estimate to start quoting customers."
+            />
           ) : (
             paginated.map((est) => (
               <div
@@ -204,14 +206,12 @@ export default function EstimatesPage() {
                 : paginated.length === 0
                 ? (
                     <tr>
-                      <td colSpan={7} className="text-center py-16">
-                        <ClipboardList className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-                        <p className="text-slate-500 font-medium">
-                          No estimates found
-                        </p>
-                        <p className="text-slate-400 text-xs mt-1">
-                          Create your first estimate to get started.
-                        </p>
+                      <td colSpan={7}>
+                        <EmptyState
+                          icon={ClipboardList}
+                          title="No estimates found"
+                          description="Create your first estimate to get started."
+                        />
                       </td>
                     </tr>
                   )

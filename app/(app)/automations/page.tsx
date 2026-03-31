@@ -61,6 +61,7 @@ import { toast } from "sonner";
 import { TRIGGER_TYPES, ACTION_TYPES } from "@/lib/validations/workflow";
 import { cn, fetchJson } from "@/lib/utils";
 import { ErrorState } from "@/components/error-state";
+import { EmptyState } from "@/components/empty-state";
 import { format } from "date-fns";
 
 const ACTION_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -228,27 +229,13 @@ export default function AutomationsPage() {
               ))}
             </div>
           ) : userWorkflows.length === 0 ? (
-            <Card className="p-12 text-center">
-              <Zap className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-              <h3 className="font-semibold text-slate-700 mb-1">
-                No workflows yet
-              </h3>
-              <p className="text-sm text-slate-500 mb-4">
-                Create your first automation or start from a template
-              </p>
-              <div className="flex gap-2 justify-center">
-                <Button onClick={() => openBuilder()} size="sm">
-                  <Plus className="w-4 h-4 mr-1" /> Create Workflow
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setTab("templates")}
-                >
-                  Browse Templates
-                </Button>
-              </div>
-            </Card>
+            <EmptyState
+              icon={Zap}
+              title="No workflows yet"
+              description="Create your first automation or start from a template."
+              actionLabel="Create Workflow"
+              onAction={() => openBuilder()}
+            />
           ) : (
             <div className="grid gap-3">
               {userWorkflows.map((w) => (

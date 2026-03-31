@@ -13,6 +13,7 @@ import {
 import { fetchJson, formatCurrency } from "@/lib/utils";
 import { PageSkeleton } from "@/components/page-skeleton";
 import { ErrorState } from "@/components/error-state";
+import { EmptyState } from "@/components/empty-state";
 
 const HEALTH_COLORS: Record<string, string> = {
   Champion: "#10b981",
@@ -219,7 +220,11 @@ export default function IntelligencePage() {
                 </div>
               </>
             ) : (
-              <p className="text-sm text-slate-400 text-center py-8">No customer data yet</p>
+              <EmptyState
+                icon={Heart}
+                title="No customer data yet"
+                description="Customer health scores will appear once you have active customers."
+              />
             )}
           </CardContent>
         </Card>
@@ -255,7 +260,11 @@ export default function IntelligencePage() {
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-slate-400 text-center py-8">Need more job data for pricing suggestions</p>
+              <EmptyState
+                icon={DollarSign}
+                title="No pricing data yet"
+                description="Complete more jobs to receive AI-powered pricing suggestions."
+              />
             )}
           </CardContent>
         </Card>
@@ -316,7 +325,11 @@ export default function IntelligencePage() {
               </table>
             </div>
           ) : (
-            <p className="text-sm text-slate-400 text-center py-8">No customer data available</p>
+            <EmptyState
+              icon={Users}
+              title="No customer data available"
+              description="Add customers and complete jobs to see the health leaderboard."
+            />
           )}
         </CardContent>
       </Card>

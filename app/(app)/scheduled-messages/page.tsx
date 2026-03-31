@@ -14,6 +14,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatDateTime, fetchJson } from "@/lib/utils";
 import { ErrorState } from "@/components/error-state";
+import { EmptyState } from "@/components/empty-state";
 
 interface ScheduledMessageData {
   id: string;
@@ -179,13 +180,11 @@ export default function ScheduledMessagesPage() {
           ))}
         </div>
       ) : filtered.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <Clock className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-            <h3 className="font-medium text-slate-600 mb-1">No scheduled messages</h3>
-            <p className="text-sm text-slate-400">Messages are auto-created when bookings are made and jobs complete</p>
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={Clock}
+          title="No scheduled messages"
+          description="Messages are auto-created when bookings are made and jobs complete."
+        />
       ) : (
         <div className="space-y-2">
           {filtered.map((msg) => (

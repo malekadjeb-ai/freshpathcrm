@@ -48,6 +48,7 @@ import {
 } from "@/components/ui/select";
 import { formatDate, fetchJson } from "@/lib/utils";
 import { ErrorState } from "@/components/error-state";
+import { EmptyState } from "@/components/empty-state";
 import { toast } from "sonner";
 
 interface Campaign {
@@ -328,18 +329,13 @@ export default function CampaignsPage() {
           ))}
         </div>
       ) : filtered.length === 0 ? (
-        <Card>
-          <CardContent className="py-16 text-center">
-            <Megaphone className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-            <h3 className="font-medium text-slate-600 mb-2">No campaigns yet</h3>
-            <p className="text-sm text-slate-400 mb-4">
-              Create your first marketing campaign to reach your customers
-            </p>
-            <Button onClick={openCreate} variant="outline" size="sm">
-              <Plus className="w-4 h-4 mr-2" /> Create Campaign
-            </Button>
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={Megaphone}
+          title="No campaigns yet"
+          description="Create your first marketing campaign to reach your customers."
+          actionLabel="Create Campaign"
+          onAction={openCreate}
+        />
       ) : (
         <div className="space-y-4">
           {filtered.map((c) => (

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth";
 import { getDb } from "@/src/db";
-import { eq, and, or, isNull, like, inArray } from "drizzle-orm";
+import { eq, and, or, isNull, like } from "drizzle-orm";
 import { customers, leads, jobs, invoices, estimates, tasks, staff, serviceItems } from "@/src/db/schema";
 
 export async function GET(req: NextRequest) {

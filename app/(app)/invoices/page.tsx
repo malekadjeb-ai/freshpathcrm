@@ -12,6 +12,7 @@ import {
 } from "@/lib/utils";
 import { ExportButton } from "@/components/shared/export-button";
 import { ErrorState } from "@/components/error-state";
+import { EmptyState } from "@/components/empty-state";
 import { Pagination } from "@/components/pagination";
 
 interface Invoice {
@@ -113,10 +114,11 @@ export default function InvoicesPage() {
             <div key={i} className="h-24 bg-slate-100 rounded-lg animate-pulse" />
           ))
         ) : paginatedInvoices.length === 0 ? (
-          <div className="text-center py-16">
-            <FileText className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-            <p className="text-slate-500 font-medium">No invoices found</p>
-          </div>
+          <EmptyState
+            icon={FileText}
+            title="No invoices found"
+            description="Invoices are created from completed jobs."
+          />
         ) : (
           paginatedInvoices.map((inv) => (
             <div
@@ -177,10 +179,12 @@ export default function InvoicesPage() {
               : paginatedInvoices.length === 0
               ? (
                 <tr>
-                  <td colSpan={7} className="text-center py-16">
-                    <FileText className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-                    <p className="text-slate-500 font-medium">No invoices found</p>
-                    <p className="text-slate-400 text-xs mt-1">Invoices are created from completed jobs.</p>
+                  <td colSpan={7}>
+                    <EmptyState
+                      icon={FileText}
+                      title="No invoices found"
+                      description="Invoices are created from completed jobs."
+                    />
                   </td>
                 </tr>
               )

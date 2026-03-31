@@ -28,6 +28,7 @@ import {
 import { communicationSchema, type CommunicationInput } from "@/lib/validations/communication";
 import { formatDate, formatDateTime, timeAgo, fetchJson } from "@/lib/utils";
 import { ErrorState } from "@/components/error-state";
+import { EmptyState } from "@/components/empty-state";
 import { Pagination } from "@/components/pagination";
 
 interface Communication {
@@ -324,18 +325,13 @@ export default function CommunicationsPage() {
           ))}
         </div>
       ) : communications.length === 0 ? (
-        <div className="text-center py-16">
-          <Phone className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-          <p className="text-slate-500 font-medium">No communications found</p>
-          <p className="text-slate-400 text-sm mt-1">Log your first call, text, or email to get started.</p>
-          <Button
-            onClick={() => { setEditComm(null); setDialogOpen(true); }}
-            className="mt-4 bg-emerald-500 hover:bg-emerald-600 text-white"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Log Communication
-          </Button>
-        </div>
+        <EmptyState
+          icon={Phone}
+          title="No communications found"
+          description="Log your first call, text, or email to get started."
+          actionLabel="Log Communication"
+          onAction={() => { setEditComm(null); setDialogOpen(true); }}
+        />
       ) : (
         <>
         {/* Mobile Card Layout */}

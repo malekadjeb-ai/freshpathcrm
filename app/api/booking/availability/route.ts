@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/src/db";
 import { businessSettings, jobs } from "@/src/db/schema";
-import { and, gte, lte, ne, isNull } from "drizzle-orm";
+import { and, gte, lte, ne } from "drizzle-orm";
 
 export async function GET(req: NextRequest) {
   try {

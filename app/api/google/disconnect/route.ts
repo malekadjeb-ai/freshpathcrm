@@ -7,7 +7,7 @@ import { eq } from "drizzle-orm";
 export async function POST() {
   const auth = await requireAuth();
     if ("error" in auth) return auth.error;
-    const { session: _session, tenantId } = auth;
+    const { session: _session, tenantId: _tenantId } = auth;
 
   const db = getDb();
   const settings = await db.select().from(businessSettings).limit(1).then(r => r[0]);

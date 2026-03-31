@@ -17,6 +17,8 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const status = searchParams.get("status") || "";
     const search = searchParams.get("search") || "";
+    const page = searchParams.get("page") ? parseInt(searchParams.get("page")!) : null;
+    const limit = Math.min(parseInt(searchParams.get("limit") || "25"), 100);
 
     // Build conditions - scope through customer tenant
     const conditions = [isNull(estimates.deletedAt), eq(customers.tenantId, tenantId)];
@@ -111,6 +113,14 @@ export async function GET(req: NextRequest) {
       lineItems: lineItemsMap.get(est.id) || [],
     }));
 
+    if (page) {
+      const total = result.length;
+      const paginatedResult = result.slice((page - 1) * limit, page * limit);
+      return NextResponse.json({
+        data: paginatedResult,
+        pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+      });
+    }
     return NextResponse.json(result);
   } catch {
     return NextResponse.json(

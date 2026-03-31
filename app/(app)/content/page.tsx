@@ -11,6 +11,7 @@ import {
 import { toast } from "sonner";
 import { formatDate, fetchJson } from "@/lib/utils";
 import { ErrorState } from "@/components/error-state";
+import { EmptyState } from "@/components/empty-state";
 
 interface SocialPost {
   id: string;
@@ -137,13 +138,11 @@ export default function ContentPage() {
           ))}
         </div>
       ) : posts.length === 0 ? (
-        <div className="text-center py-16 bg-white rounded-xl border border-slate-200">
-          <Sparkles className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-          <h3 className="text-lg font-semibold text-slate-900 mb-1">No content yet</h3>
-          <p className="text-sm text-slate-500">
-            Complete jobs with before/after photos, then generate social posts from the job detail page.
-          </p>
-        </div>
+        <EmptyState
+          icon={Sparkles}
+          title="No content yet"
+          description="Complete jobs with before/after photos, then generate social posts from the job detail page."
+        />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {posts.map((post) => (

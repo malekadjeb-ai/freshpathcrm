@@ -98,13 +98,30 @@ Production-grade CRM for Fresh Path Mobile Detailing. Premium mobile car detaili
 - The Prisma migration is COMPLETE — no Prisma references should exist (lib/prisma.ts is now lib/db.ts)
 - DB client uses React cache() per-request pattern — no global singletons
 
-## Known Technical Debt
+## Known Technical Debt (Updated 2026-03-31 Sprint 1)
 
-- Tenant isolation incomplete on customers, jobs, invoices, estimates, expenses routes (leads is correct)
-- N+1 queries in jobs/route.ts and customers/route.ts (enrichment loops)
-- No tests, no CI/CD pipeline
+### Resolved in Sprint 1
+- ~~lib/prisma.ts dead code~~ — deleted
+- ~~Nodemailer duplication~~ — removed, Resend-only
+- ~~No tests, no CI/CD~~ — 237 tests passing, .github/workflows/ci.yml in place
+- ~~God-pages (dashboard 239, jobs-content 460, customers 328, book 882, calendar 626, portal 576, recurring-jobs 573, tasks 572)~~ — all decomposed to <150 lines
+- ~~Conversations page separate from communications~~ — merged into unified /communications inbox with tabs
+- ~~No cache headers~~ — 20 GET routes now cache with appropriate TTLs
+- ~~Unbounded list queries~~ — pagination added to customers, jobs, leads, invoices, payments
+- ~~No dynamic imports for recharts~~ — chart wrappers in components/charts/ with ssr:false
+- ~~/api/search cross-tenant leak~~ — fixed, lib/tenant.ts created
+
+### Still Open
+- N+1 queries in jobs/route.ts and customers/route.ts (enrichment loops) — use inArray()
+- Tenant isolation incomplete on customers, jobs, invoices, estimates, expenses routes — verify with inArray tenant filter
 - businessSettings stores API secrets in plaintext — needs migration to env vars
-- 5 god-pages over 1000 lines: customers/[id], dashboard, communications, jobs/[id], automations
+- In-memory rate limiter doesn't persist across Cloudflare Worker isolates — needs Upstash Redis (UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN env vars required)
+- NextAuth v4 on Next.js 14 — Auth.js v5 migration deferred (breaking change, needs dedicated sprint)
+- No Sentry error tracking — needs account + SENTRY_DSN env var
+- 3 pre-existing test failures in __tests__/business-flows.test.ts — reference removed RATE_LIMITS export
+- Zero cache headers on remaining 155+ API routes
+- No E2E tests (Playwright) — deferred to Sprint 2
+- automations/page.tsx still large — deferred to Sprint 2
 
 ## Context
 

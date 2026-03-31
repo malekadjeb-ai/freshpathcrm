@@ -27,6 +27,24 @@ export const tenants = sqliteTable("Tenant", {
   updatedAt: text("updated_at").notNull().$defaultFn(() => new Date().toISOString()),
 });
 
+// ─── Invitations ─────────────────────────────────────────────────
+
+export const invitations = sqliteTable("Invitation", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  tenantId: text("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
+  email: text("email").notNull(),
+  role: text("role").notNull().default("TECH"),
+  invitedBy: text("invited_by"),
+  token: text("token").notNull().unique(),
+  status: text("status").notNull().default("pending"),
+  expiresAt: text("expires_at").notNull(),
+  acceptedAt: text("accepted_at"),
+  createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
+}, (table) => ({
+  tokenIdx: index("Invitation_token_idx").on(table.token),
+  tenantEmailIdx: index("Invitation_tenantId_email_idx").on(table.tenantId, table.email),
+}));
+
 // ─── Business Settings ───────────────────────────────────────────
 
 export const businessSettings = sqliteTable("BusinessSettings", {
@@ -81,6 +99,11 @@ export const businessSettings = sqliteTable("BusinessSettings", {
   mileageRate: real("mileage_rate").notNull().default(0.67),
   autoExpenseMileage: integer("auto_expense_mileage", { mode: "boolean" }).notNull().default(true),
   autoExpenseSupplies: integer("auto_expense_supplies", { mode: "boolean" }).notNull().default(true),
+  qbAccessToken: text("qb_access_token"),
+  qbRefreshToken: text("qb_refresh_token"),
+  qbRealmId: text("qb_realm_id"),
+  qbTokenExpiry: text("qb_token_expiry"),
+  qbSyncEnabled: integer("qb_sync_enabled", { mode: "boolean" }).notNull().default(false),
   tenantId: text("tenant_id").notNull().unique().references(() => tenants.id, { onDelete: "cascade" }),
   createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
   updatedAt: text("updated_at").notNull().$defaultFn(() => new Date().toISOString()),
@@ -449,6 +472,11 @@ export const auditLogs = sqliteTable("AuditLog", {
   entityId: text("entity_id").notNull(),
   details: text("details"),
   userId: text("user_id"),
+  userEmail: text("user_email"),
+  tenantId: text("tenant_id"),
+  changes: text("changes"),
+  metadata: text("metadata"),
+  ipAddress: text("ip_address"),
   createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
 }, (table) => ({
   entityIdx: index("AuditLog_entity_entityId_idx").on(table.entity, table.entityId),

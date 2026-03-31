@@ -17,6 +17,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Textarea } from "@/components/ui/textarea";
 import { fetchJson, formatCurrency, formatDate } from "@/lib/utils";
 import { ErrorState } from "@/components/error-state";
+import { EmptyState } from "@/components/empty-state";
 
 interface RecurringJobData {
   id: string;
@@ -227,13 +228,13 @@ export default function RecurringJobsPage() {
           ))}
         </div>
       ) : filtered.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <RefreshCw className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-            <h3 className="font-medium text-slate-600 mb-1">No recurring jobs found</h3>
-            <p className="text-sm text-slate-400">Create one to auto-schedule repeat services</p>
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={RefreshCw}
+          title="No recurring jobs found"
+          description="Create one to auto-schedule repeat services for your customers."
+          actionLabel="New Recurring Job"
+          onAction={() => setCreateOpen(true)}
+        />
       ) : (
         <div className="space-y-3">
           {filtered.map((rj) => {

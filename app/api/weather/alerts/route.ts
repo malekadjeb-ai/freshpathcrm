@@ -8,7 +8,7 @@ export async function GET(req: NextRequest) {
   try {
     const auth = await requireAuth();
     if ("error" in auth) return auth.error;
-    const { session: _session, tenantId } = auth;
+    const { session: _session, tenantId: _tenantId } = auth;
 
     // Fetch weather forecast
     const weatherRes = await fetch(

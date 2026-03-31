@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { cn, formatCurrency, formatDate, fetchJson } from "@/lib/utils";
 import { ErrorState } from "@/components/error-state";
+import { EmptyState } from "@/components/empty-state";
 import { useState } from "react";
 
 interface PaymentRow {
@@ -169,10 +170,11 @@ export default function PaymentsPage() {
               ))}
             </div>
           ) : payments.length === 0 ? (
-            <div className="text-center py-12">
-              <CreditCard className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-              <p className="text-sm text-slate-500">No payments found</p>
-            </div>
+            <EmptyState
+              icon={CreditCard}
+              title="No payments found"
+              description="Payments will appear here once invoices are paid."
+            />
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
