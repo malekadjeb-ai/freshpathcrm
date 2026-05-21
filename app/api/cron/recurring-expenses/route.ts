@@ -1,14 +1,14 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getDbAsync } from "@/src/db";
 import { expenses } from "@/src/db/schema";
 import { eq, and, gte, lte } from "drizzle-orm";
+import { verifyCronRequest } from "@/lib/cron-auth";
 
-/**
- * GET /api/cron/recurring-expenses
- * Duplicates all recurring expenses for the current month if they haven't been created yet.
- * Should be called once daily via Vercel Cron or external scheduler.
- */
-export async function GET() {
+export const dynamic = "force-dynamic";
+
+export async function GET(req: NextRequest) {
+  const denied = verifyCronRequest(req);
+  if (denied) return denied;
   try {
     const db = await getDbAsync();
 
@@ -21,7 +21,6 @@ export async function GET() {
       .split("T")[0];
     const today = now.toISOString().split("T")[0];
 
-    // Get all recurring expenses
     const recurringExpenses = await db
       .select()
       .from(expenses)
@@ -31,20 +30,22 @@ export async function GET() {
     let skipped = 0;
 
     for (const recurring of recurringExpenses) {
-      // Check if this recurring expense already has an entry this month
+      // A copy is identified by same (tenant, category, description, amount)
+      // landing in the current month and not flagged as recurring itself.
+      const dupChecks = [
+        eq(expenses.category, recurring.category),
+        eq(expenses.description, recurring.description),
+        eq(expenses.amount, recurring.amount),
+        gte(expenses.date, monthStart),
+        lte(expenses.date, monthEnd),
+        eq(expenses.isRecurring, false),
+        recurring.tenantId ? eq(expenses.tenantId, recurring.tenantId) : undefined,
+      ].filter(Boolean);
+
       const existing = await db
         .select({ id: expenses.id })
         .from(expenses)
-        .where(
-          and(
-            eq(expenses.category, recurring.category),
-            eq(expenses.description, recurring.description),
-            eq(expenses.amount, recurring.amount),
-            gte(expenses.date, monthStart),
-            lte(expenses.date, monthEnd),
-            eq(expenses.isRecurring, false)
-          )
-        )
+        .where(and(...dupChecks))
         .limit(1);
 
       if (existing.length > 0) {
@@ -52,7 +53,6 @@ export async function GET() {
         continue;
       }
 
-      // Create this month's entry (non-recurring copy)
       await db.insert(expenses).values({
         category: recurring.category,
         description: recurring.description,
@@ -61,6 +61,7 @@ export async function GET() {
         vendor: recurring.vendor,
         jobId: null,
         isRecurring: false,
+        tenantId: recurring.tenantId,
       });
       created++;
     }
@@ -74,7 +75,7 @@ export async function GET() {
     console.error("[CRON] Recurring expenses error:", err);
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

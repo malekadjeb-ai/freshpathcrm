@@ -1,67 +1,86 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/src/db";
-import { customers, communications, users, notifications } from "@/src/db/schema";
-import { eq, or, like } from "drizzle-orm";
+import { customers, communications, users, notifications, businessSettings } from "@/src/db/schema";
+import { eq, or, like, and, isNull } from "drizzle-orm";
+import { verifyTwilioSignature } from "@/lib/twilio-auth";
 
 /**
  * POST /api/webhooks/twilio/inbound
- * Receives inbound SMS messages from Twilio and records them as communications.
- * This enables two-way messaging: customers can reply to SMS and it appears in conversations.
+ * Receives inbound SMS messages from Twilio. Signature is verified against
+ * TWILIO_AUTH_TOKEN before any DB writes happen.
  */
 export async function POST(req: NextRequest) {
+  const rawBody = await req.text();
+
+  const denied = verifyTwilioSignature(req, rawBody);
+  if (denied) return denied;
+
   try {
     const db = getDb();
-    const bodyText = await req.text();
-    const params = new URLSearchParams(bodyText);
 
-    const from = params.get("From"); // e.g. "+15551234567"
-    const body = params.get("Body") || "";
+    const settingsRow = await db
+      .select({ tenantId: businessSettings.tenantId })
+      .from(businessSettings)
+      .limit(1)
+      .then((r) => r[0]);
+
+    const params = new URLSearchParams(rawBody);
+    const from = params.get("From");
+    const body = params.get("Body") ?? "";
     const messageSid = params.get("MessageSid");
-    const numMedia = parseInt(params.get("NumMedia") || "0", 10);
+    const numMedia = parseInt(params.get("NumMedia") ?? "0", 10);
 
     if (!from || !messageSid) {
       return twimlResponse("Missing required fields");
     }
 
-    // Normalize phone number for lookup
     const normalizedPhone = from.replace(/\D/g, "").slice(-10);
 
-    // Try to find customer by phone
-    const allCustomers = await db
+    const phoneFilter = or(
+      like(customers.phone, `%${normalizedPhone}%`),
+      eq(customers.phone, from),
+    );
+    const where = settingsRow
+      ? and(eq(customers.tenantId, settingsRow.tenantId), phoneFilter, isNull(customers.deletedAt))
+      : and(phoneFilter, isNull(customers.deletedAt));
+
+    const customer = await db
       .select()
       .from(customers)
-      .where(
-        or(
-          like(customers.phone, `%${normalizedPhone}%`),
-          eq(customers.phone, from)
-        )
-      );
-    const customer = allCustomers.find((c) => c.deletedAt === null) ?? null;
+      .where(where)
+      .limit(1)
+      .then((r) => r[0] ?? null);
 
-    // Build media URLs if any
     const mediaUrls: string[] = [];
     for (let i = 0; i < numMedia; i++) {
       const url = params.get(`MediaUrl${i}`);
       if (url) mediaUrls.push(url);
     }
 
-    const fullBody = mediaUrls.length > 0
-      ? `${body}\n\n[Attachments: ${mediaUrls.join(", ")}]`
-      : body;
+    const fullBody =
+      mediaUrls.length > 0
+        ? `${body}\n\n[Attachments: ${mediaUrls.join(", ")}]`
+        : body;
 
-    // Auto-create customer if not found
     let customerId = customer?.id;
     if (!customerId) {
-      const [newCustomer] = await db.insert(customers).values({
-        name: from || "Unknown",
-        phone: from,
-        source: "SMS Inbound",
-        lifecycleStage: "New",
-      }).returning();
+      if (!settingsRow) {
+        // No tenant configured — drop the message to avoid orphaned data
+        return twimlResponse("");
+      }
+      const [newCustomer] = await db
+        .insert(customers)
+        .values({
+          name: from,
+          phone: from,
+          source: "SMS Inbound",
+          lifecycleStage: "New",
+          tenantId: settingsRow.tenantId,
+        })
+        .returning();
       customerId = newCustomer.id;
     }
 
-    // Create communication record
     await db.insert(communications).values({
       customerId,
       type: "sms",
@@ -74,26 +93,26 @@ export async function POST(req: NextRequest) {
       source: "twilio_inbound",
     });
 
-    // Update customer last contacted
-    await db.update(customers)
+    await db
+      .update(customers)
       .set({ lastContactedAt: new Date().toISOString(), updatedAt: new Date().toISOString() })
       .where(eq(customers.id, customerId));
 
-    // Create a notification for the team
     const allUsers = await db.select({ id: users.id }).from(users);
-    const senderName = customer?.name || from;
-
-    for (const user of allUsers) {
-      await db.insert(notifications).values({
-        userId: user.id,
-        title: `New SMS from ${senderName}`,
-        message: fullBody.length > 100 ? fullBody.substring(0, 100) + "..." : fullBody,
-        type: "info",
-        link: `/conversations?customerId=${customerId}`,
-      });
+    if (allUsers.length > 0) {
+      const senderName = customer?.name ?? from;
+      const preview = fullBody.length > 100 ? fullBody.substring(0, 100) + "..." : fullBody;
+      await db.insert(notifications).values(
+        allUsers.map((u) => ({
+          userId: u.id,
+          title: `New SMS from ${senderName}`,
+          message: preview,
+          type: "info",
+          link: `/conversations?customerId=${customerId}`,
+        })),
+      );
     }
 
-    // Respond with empty TwiML (acknowledge receipt)
     return twimlResponse("");
   } catch (error) {
     console.error("Twilio inbound webhook error:", error);
@@ -113,5 +132,8 @@ function twimlResponse(message: string) {
 }
 
 function escapeXml(str: string) {
-  return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
 }

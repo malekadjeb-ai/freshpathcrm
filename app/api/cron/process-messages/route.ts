@@ -1,12 +1,12 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { processScheduledMessages } from "@/lib/services/scheduled-messages";
+import { verifyCronRequest } from "@/lib/cron-auth";
 
-/**
- * GET /api/cron/process-messages
- * Processes due scheduled messages (confirmations, reminders, follow-ups).
- * Called by client-side polling or external cron (e.g., Vercel Cron).
- */
-export async function GET() {
+export const dynamic = "force-dynamic";
+
+export async function GET(req: NextRequest) {
+  const denied = verifyCronRequest(req);
+  if (denied) return denied;
   try {
     const results = await processScheduledMessages();
     return NextResponse.json({

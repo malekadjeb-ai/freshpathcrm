@@ -3,6 +3,7 @@ import { getDb } from "@/src/db";
 import { businessSettings } from "@/src/db/schema";
 import { eq } from "drizzle-orm";
 import { getQBConfig } from "@/lib/quickbooks";
+import crypto from "crypto";
 
 export async function GET(req: NextRequest) {
   const url = new URL(req.url);
@@ -17,15 +18,31 @@ export async function GET(req: NextRequest) {
   }
 
   let tenantId: string;
+  let nonce: string;
   try {
-    const state = JSON.parse(
-      Buffer.from(stateParam, "base64url").toString("utf8")
-    );
+    const state = JSON.parse(Buffer.from(stateParam, "base64url").toString("utf8"));
     tenantId = state.tenantId;
-    if (!tenantId) throw new Error("No tenantId in state");
+    nonce = state.nonce;
+    if (!tenantId || !nonce) throw new Error("Missing state fields");
+    if (!state.ts || Date.now() - state.ts > 10 * 60 * 1000) throw new Error("State expired");
   } catch {
     return NextResponse.redirect(
       new URL("/settings?integration=quickbooks-error&reason=invalid_state", req.url)
+    );
+  }
+
+  // CSRF: verify nonce matches the cookie set during connect.
+  // Length check first — timingSafeEqual throws on length mismatch.
+  const cookieNonce = req.cookies.get("qb-oauth-nonce")?.value;
+  const cookieBuf = cookieNonce ? Buffer.from(cookieNonce) : null;
+  const nonceBuf = Buffer.from(nonce);
+  if (
+    !cookieBuf ||
+    cookieBuf.length !== nonceBuf.length ||
+    !crypto.timingSafeEqual(cookieBuf, nonceBuf)
+  ) {
+    return NextResponse.redirect(
+      new URL("/settings?integration=quickbooks-error&reason=csrf_failed", req.url)
     );
   }
 
@@ -76,7 +93,9 @@ export async function GET(req: NextRequest) {
     })
     .where(eq(businessSettings.tenantId, tenantId));
 
-  return NextResponse.redirect(
+  const successResponse = NextResponse.redirect(
     new URL("/settings?integration=quickbooks-success", req.url)
   );
+  successResponse.cookies.delete("qb-oauth-nonce");
+  return successResponse;
 }

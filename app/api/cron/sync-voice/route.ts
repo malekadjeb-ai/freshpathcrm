@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/src/db";
 import { businessSettings, communications, tasks, users, notifications } from "@/src/db/schema";
 import { eq, and, gte, or } from "drizzle-orm";
@@ -6,12 +6,17 @@ import { getAuthedGoogleClient } from "@/lib/google";
 import { syncGoogleVoiceFromGmail } from "@/lib/services/gmail-voice-sync";
 import { syncLSALeadsFromGmail } from "@/lib/services/gmail-lsa-sync";
 import { subHours, subDays } from "date-fns";
+import { verifyCronRequest } from "@/lib/cron-auth";
+
+export const dynamic = "force-dynamic";
 
 /**
  * GET /api/cron/sync-voice
  * Auto-syncs Google Voice communications from Gmail.
  */
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const denied = verifyCronRequest(req);
+  if (denied) return denied;
   try {
     const db = getDb();
     const settings = await db.select({

@@ -29,13 +29,18 @@ export async function POST(req: NextRequest) {
     if (!success) return rateLimitResponse();
 
     const db = getDb();
-    const settings = await db.select().from(businessSettings).limit(1).then(r => r[0]);
+    const settings = await db
+      .select({ tenantId: businessSettings.tenantId, bookingEnabled: businessSettings.bookingEnabled, autoConfirmBookings: businessSettings.autoConfirmBookings })
+      .from(businessSettings)
+      .limit(1)
+      .then((r) => r[0]);
     if (!settings || !settings.bookingEnabled) {
       return NextResponse.json(
         { error: "Online booking is not currently available" },
         { status: 400 }
       );
     }
+    const tenantId = settings.tenantId;
 
     const body = await req.json();
     const parsed = bookingSchema.safeParse(body);
@@ -68,11 +73,16 @@ export async function POST(req: NextRequest) {
     const subtotal = services.reduce((sum, s) => sum + s.basePrice, 0);
     const total = subtotal;
 
-    // Find or create customer
-    const whereClauses = [eq(customers.phone, data.phone)];
-    if (data.email) whereClauses.push(eq(customers.email, data.email));
-
-    let customer = await db.select().from(customers).where(or(...whereClauses)).limit(1).then(r => r[0]);
+    // Find or create customer — scoped to this tenant
+    const phoneOrEmail = data.email
+      ? or(eq(customers.phone, data.phone), eq(customers.email, data.email))
+      : eq(customers.phone, data.phone);
+    let customer = await db
+      .select()
+      .from(customers)
+      .where(and(eq(customers.tenantId, tenantId), phoneOrEmail))
+      .limit(1)
+      .then((r) => r[0]);
 
     if (!customer) {
       [customer] = await db.insert(customers).values({
@@ -82,6 +92,7 @@ export async function POST(req: NextRequest) {
         address: data.address || null,
         source: "Website",
         lifecycleStage: "active",
+        tenantId,
       }).returning();
     }
 
@@ -141,32 +152,41 @@ export async function POST(req: NextRequest) {
       toStatus: "Scheduled",
     });
 
-    // Create notification
     const allUsers = await db.select({ id: users.id }).from(users);
-    for (const user of allUsers) {
-      await db.insert(notifications).values({
-        userId: user.id,
-        type: "new_booking",
-        title: "New Online Booking",
-        message: `${data.name} booked ${services.map((s) => s.name).join(", ")} for ${scheduledAt.toLocaleDateString()}`,
-        link: `/jobs/${job.id}`,
-      });
+    if (allUsers.length > 0) {
+      const message = `${data.name} booked ${services
+        .map((s) => s.name)
+        .join(", ")} for ${scheduledAt.toLocaleDateString()}`;
+      await db.insert(notifications).values(
+        allUsers.map((u) => ({
+          userId: u.id,
+          type: "new_booking",
+          title: "New Online Booking",
+          message,
+          link: `/jobs/${job.id}`,
+        })),
+      );
     }
 
-    // Schedule confirmation SMS and 24h reminder
     try {
       await scheduleBookingConfirmation(job.id);
       await scheduleJobReminder(job.id, 24);
-    } catch {}
+    } catch (err) {
+      console.error("[booking] message scheduling failed:", err);
+    }
 
-    return NextResponse.json({
-      success: true,
-      jobId: job.id,
-      message: settings.autoConfirmBookings
-        ? "Your booking is confirmed!"
-        : "Your booking request has been submitted. We'll confirm shortly.",
-    }, { status: 201 });
-  } catch {
+    return NextResponse.json(
+      {
+        success: true,
+        jobId: job.id,
+        message: settings.autoConfirmBookings
+          ? "Your booking is confirmed!"
+          : "Your booking request has been submitted. We'll confirm shortly.",
+      },
+      { status: 201 },
+    );
+  } catch (err) {
+    console.error("[booking] submit error:", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
